@@ -10,42 +10,8 @@ public interface IExtractor< TYPE > {
     }
 
 
-    class Response< TYPE > {
+    class Response< TYPE > extends PaginatedResponse< IExtractor.Entity< TYPE > > {
 
-        private List< ? extends IExtractor.Entity< TYPE > > entities;
-
-        private String cursor;
-
-        private boolean hasNext;
-
-
-        public Response() {
-
-        }
-
-        public List<? extends IExtractor.Entity< TYPE >> getEntities() {
-            return entities;
-        }
-
-        public void setEntities(List<? extends IExtractor.Entity< TYPE >> entities) {
-            this.entities = entities;
-        }
-
-        public String getCursor() {
-            return cursor;
-        }
-
-        public void setCursor(String cursor) {
-            this.cursor = cursor;
-        }
-
-        public boolean hasNext() {
-            return hasNext;
-        }
-
-        public void setHasNext(boolean hasNext) {
-            this.hasNext = hasNext;
-        }
     }
 
 

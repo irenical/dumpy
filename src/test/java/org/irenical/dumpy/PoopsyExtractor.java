@@ -4,15 +4,16 @@ import org.irenical.dumpy.api.IExtractor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class PoopsyStream implements IExtractor< Integer > {
+public class PoopsyExtractor implements IExtractor< Integer > {
 
     private static final int RESPONSE_LIMIT = 1000;
 
     private static final int TOTAL = 5000;
 
 
-    public PoopsyStream() {
+    public PoopsyExtractor() {
 
     }
 
@@ -45,13 +46,15 @@ public class PoopsyStream implements IExtractor< Integer > {
 
     @Override
     public Response< Integer > get(List<String> ids, String cursor) {
-        throw new UnsupportedOperationException("TODO");
+        List< Entity< Integer > > entities = new ArrayList<>( ids.size() );
+        entities.addAll(ids.stream().map(id -> new Poopsy(Integer.valueOf(id))).collect(Collectors.toList()));
+        return createResponse( entities, null, false );
     }
 
 
-    private Response< Integer > createResponse( List< ? extends Entity< Integer > > entities, String cursor, boolean hasNext ) {
+    private Response< Integer > createResponse( List< Entity< Integer > > entities, String cursor, boolean hasNext ) {
         Response< Integer > response = new Response<>();
-        response.setEntities( entities );
+        response.setValues( entities );
         response.setCursor( cursor );
         response.setHasNext( hasNext );
         return response;

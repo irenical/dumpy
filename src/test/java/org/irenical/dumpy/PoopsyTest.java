@@ -44,7 +44,7 @@ public class PoopsyTest {
             @Override
             public List<IStream> getStreams() {
                 ILoader< Integer > iLoader = new PoopsyLoader();
-                IExtractor< Integer > iExtractor = new PoopsyStream();
+                IExtractor< Integer > iExtractor = new PoopsyExtractor();
 
                 return Arrays.asList(
                         new StreamImpl<>("1", iExtractor, iLoader),

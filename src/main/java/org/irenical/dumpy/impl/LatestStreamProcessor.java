@@ -2,7 +2,6 @@ package org.irenical.dumpy.impl;
 
 import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.impl.db.DumpyDB;
-import org.irenical.jindy.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.irenical.dumpy.DumpyThreadFactory;
@@ -17,29 +16,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-public class StreamProcessor implements IStreamProcessor {
+public class LatestStreamProcessor implements IStreamProcessor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger( StreamProcessor.class );
-
-    private static final int DEFAULT_AWAIT_TERMINATION_TIMEOUT_SECONDS = 60;
-
-    private int awaitTerminationTimeoutSeconds;
-
-    private final DumpyDB dumpyDB;
+    private static final Logger LOGGER = LoggerFactory.getLogger( LatestStreamProcessor.class );
 
     private final ExecutorService loaderResponseExecutor = Executors.newCachedThreadPool( new DumpyThreadFactory() );
+
+    private final DumpyDB dumpyDB;
 
     private boolean isRunning = false;
 
 
-    public StreamProcessor( DumpyDB dumpyDB ) {
+    public LatestStreamProcessor(DumpyDB dumpyDB ) {
         this.dumpyDB = dumpyDB;
     }
 
     @Override
     public <ERROR extends Exception> void start() throws ERROR {
-        awaitTerminationTimeoutSeconds = ConfigFactory.getConfig().getInt( "streamprocessor.await-timeout-seconds",
-                DEFAULT_AWAIT_TERMINATION_TIMEOUT_SECONDS );
         isRunning = true;
     }
 
@@ -77,14 +70,16 @@ public class StreamProcessor implements IStreamProcessor {
         String cursor = dumpyDB.getCursor( iJob.getCode(), iStream.getCode() );
         boolean hasNext = true;
         while ( isRunning && hasNext ) {
-            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
+//            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
             IExtractor.Response< TYPE > extractorResponse = iExtractor.get(cursor);
 
-            Future<ILoader.Status> loaderTask = executorService.submit( () ->
-                    iLoader.load(extractorResponse.getEntities()) );
+            if ( extractorResponse.getValues() != null && ! extractorResponse.getValues().isEmpty() ) {
+                Future<ILoader.Status> loaderTask = executorService.submit(() ->
+                        iLoader.load(extractorResponse.getValues()));
 
-            loaderResponseExecutor.execute( new LoaderResponseHandler<>( dumpyDB, iJob, iStream, loaderTask,
-                    new LinkedList<IExtractor.Entity<TYPE>>( extractorResponse.getEntities() ) ) );
+                loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
+                        new LinkedList<>(extractorResponse.getValues())));
+            }
 
             // update next cursor
             dumpyDB.setCursor( iJob.getCode(), iStream.getCode(), cursor );
@@ -96,13 +91,16 @@ public class StreamProcessor implements IStreamProcessor {
         // wait for all tasks to complete
         executorService.shutdown();
         try {
-            executorService.awaitTermination( awaitTerminationTimeoutSeconds, TimeUnit.SECONDS );
-            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] stream done" );
+            boolean awaitTermination = false;
+            while ( ! awaitTermination ) {
+                awaitTermination = executorService.awaitTermination( 10, TimeUnit.SECONDS );
+            }
         } catch ( InterruptedException e ) {
             LOGGER.error( e.getLocalizedMessage(), e );
             executorService.shutdownNow();
-            executorService.awaitTermination( awaitTerminationTimeoutSeconds, TimeUnit.SECONDS );
+            executorService.awaitTermination( Long.MAX_VALUE, TimeUnit.NANOSECONDS );
         }
+        LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] stream done" );
     }
 
 }

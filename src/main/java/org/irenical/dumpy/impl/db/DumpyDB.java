@@ -3,6 +3,7 @@ package org.irenical.dumpy.impl.db;
 import org.irenical.drowsy.datasource.DrowsyDataSource;
 import org.irenical.drowsy.query.Query;
 import org.irenical.drowsy.query.SQLQueryBuilder;
+import org.irenical.dumpy.api.PaginatedResponse;
 import org.irenical.jindy.ConfigFactory;
 import org.irenical.lifecycle.LifeCycle;
 import org.slf4j.Logger;
@@ -10,6 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DumpyDB implements LifeCycle {
 
@@ -91,6 +94,9 @@ public class DumpyDB implements LifeCycle {
             String jobCode, String streamCode, Object[] entityIds,
             ZonedDateTime lastErrorStamp, ZonedDateTime lastUpdatedStamp )
     throws SQLException {
+        if ( entityIds == null || entityIds.length == 0 ) {
+            return false;
+        }
 
         SQLQueryBuilder queryBuilder = SQLQueryBuilder.update("WITH ")
                 .append("queryStreamId AS ( ")
@@ -121,6 +127,38 @@ public class DumpyDB implements LifeCycle {
         Query query = queryBuilder.build();
 
         return new JdbcUpdateOperation( query ).run( dataSource );
+    }
+
+
+
+
+    public PaginatedResponse< String > get(String jobCode, String streamCode, String cursor ) throws SQLException {
+        Integer offset = cursor == null || cursor.trim().isEmpty() ? 0 : Integer.valueOf(cursor);
+
+        Query query = SQLQueryBuilder.select("SELECT dumpy_stream_entity.entity_id " +
+                "FROM dumpy_stream_entity " +
+                "  INNER JOIN dumpy_stream ON ( dumpy_stream.id = dumpy_stream_entity.stream_id " +
+                "                               AND dumpy_stream.job_code=").param(jobCode)
+                .append("                       AND dumpy_stream.stream_code=").param(streamCode)
+                .append(" ) " +
+                        "WHERE " +
+                        "  dumpy_stream_entity.last_error_stamp IS NOT NULL " +
+                        "ORDER BY dumpy_stream_entity.id " +
+                        "OFFSET ").param( offset ).append(" LIMIT 10" )
+                .build();
+        return new JdbcSelectOperation<>(query, rs -> {
+            List< String > result = new ArrayList<>();
+            while( rs.next() ) {
+                result.add( rs.getString( 1 ) );
+            }
+
+            PaginatedResponse< String > cursorResponse = new PaginatedResponse<>();
+            cursorResponse.values = result;
+            cursorResponse.cursor = String.valueOf( offset + 10 );
+            cursorResponse.hasNext = result.size() >= 10;
+
+            return cursorResponse;
+        }).run( dataSource );
     }
 
 }
