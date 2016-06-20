@@ -1,5 +1,7 @@
 package org.irenical.dumpy.api;
 
+import org.irenical.dumpy.impl.model.PaginatedResponse;
+
 import java.util.List;
 
 public interface IExtractor< TYPE > {
@@ -10,7 +12,7 @@ public interface IExtractor< TYPE > {
     }
 
 
-    class Response< TYPE > extends PaginatedResponse< IExtractor.Entity< TYPE > > {
+    class Response< TYPE > extends PaginatedResponse< Entity< TYPE > > {
 
     }
 

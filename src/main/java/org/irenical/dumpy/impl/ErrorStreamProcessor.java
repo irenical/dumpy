@@ -6,7 +6,7 @@ import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.ILoader;
 import org.irenical.dumpy.api.IStream;
 import org.irenical.dumpy.api.IStreamProcessor;
-import org.irenical.dumpy.api.PaginatedResponse;
+import org.irenical.dumpy.impl.model.PaginatedResponse;
 import org.irenical.dumpy.impl.db.DumpyDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-package org.irenical.dumpy.api;
+package org.irenical.dumpy.impl.model;
 
 import java.util.List;
 

@@ -3,7 +3,7 @@ package org.irenical.dumpy.impl.db;
 import org.irenical.drowsy.datasource.DrowsyDataSource;
 import org.irenical.drowsy.query.Query;
 import org.irenical.drowsy.query.SQLQueryBuilder;
-import org.irenical.dumpy.api.PaginatedResponse;
+import org.irenical.dumpy.impl.model.PaginatedResponse;
 import org.irenical.jindy.ConfigFactory;
 import org.irenical.lifecycle.LifeCycle;
 import org.slf4j.Logger;
