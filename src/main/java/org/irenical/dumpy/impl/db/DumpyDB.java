@@ -1,22 +1,22 @@
 package org.irenical.dumpy.impl.db;
 
 import org.irenical.drowsy.datasource.DrowsyDataSource;
+import org.irenical.drowsy.query.BaseQuery;
 import org.irenical.drowsy.query.Query;
-import org.irenical.drowsy.query.SQLQueryBuilder;
+import org.irenical.drowsy.query.builder.sql.InsertBuilder;
+import org.irenical.drowsy.query.builder.sql.SelectBuilder;
+import org.irenical.drowsy.query.builder.sql.UpdateBuilder;
 import org.irenical.dumpy.impl.model.PaginatedResponse;
 import org.irenical.jindy.ConfigFactory;
 import org.irenical.lifecycle.LifeCycle;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class DumpyDB implements LifeCycle {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger( DumpyDB.class );
 
     private final DrowsyDataSource dataSource;
 
@@ -47,9 +47,11 @@ public class DumpyDB implements LifeCycle {
 
 
     public String getCursor(String jobCode, String streamCode ) throws SQLException {
-        Query query = SQLQueryBuilder
-                .select("SELECT cursor FROM dumpy_stream WHERE job_code").eq( jobCode )
-                    .append(" AND stream_code").eq( streamCode )
+        Query query = SelectBuilder
+                .columns( "cursor" )
+                .from( "dumpy_stream" )
+                .where( "job_code" ).eq( jobCode )
+                .and( "stream_code").eq( streamCode )
                 .build();
 
         return new JdbcSelectOperation<>( query, (rs) -> rs != null && rs.next() ? rs.getString( 1 ) : null )
@@ -57,19 +59,20 @@ public class DumpyDB implements LifeCycle {
     }
 
     public boolean setCursor(String jobCode, String streamCode, String cursor ) throws SQLException {
-        Query query = SQLQueryBuilder
-                .update("UPDATE dumpy_stream SET cursor=").param( cursor )
-                .append( " WHERE job_code").eq( jobCode )
-                .append( " AND stream_code").eq( streamCode )
+        Query query = UpdateBuilder.table( "dumpy_stream" ).literal( " SET " )
+                .setExpression( "cursor", cursor )
+                .where( "job_code" ).eq( jobCode )
+                .and( "stream_code" ).eq( streamCode )
                 .build();
 
         return new JdbcUpdateOperation( query ).run( dataSource );
     }
 
     public Integer getStreamId( String jobCode, String streamCode ) throws SQLException {
-        Query query = SQLQueryBuilder
-                .select("SELECT id FROM dumpy_stream WHERE job_code").eq( jobCode )
-                .append(" AND stream_code" ).eq( streamCode )
+        Query query = SelectBuilder.columns( "id" )
+                .from( "dumpy_stream" )
+                .where( "job_code" ).eq( jobCode )
+                .and( "stream_code" ).eq( streamCode )
                 .build();
 
         return new JdbcSelectOperation<>( query, (rs) -> rs != null && rs.next() ? rs.getInt( 1 ) : null)
@@ -77,10 +80,9 @@ public class DumpyDB implements LifeCycle {
     }
 
     public Integer newStream( String jobCode, String streamCode ) throws SQLException {
-        Query query = SQLQueryBuilder
-                .insert("INSERT INTO dumpy_stream (job_code, stream_code, cursor) VALUES (")
-                .param(jobCode).append(",").param(streamCode).append(",").param(null)
-                .append(")")
+        Query query = InsertBuilder.into( "dumpy_stream" )
+                .columns( "job_code", "stream_code", "cursor" )
+                .values( jobCode, streamCode, null )
                 .build();
 
         return new JdbcInsertOperation( query )
@@ -98,54 +100,65 @@ public class DumpyDB implements LifeCycle {
             return false;
         }
 
-        SQLQueryBuilder queryBuilder = SQLQueryBuilder.update("WITH ")
-                .append("queryStreamId AS ( ")
-                .append("  SELECT id FROM dumpy_stream WHERE job_code").eq(jobCode).append(" AND stream_code").eq(streamCode)
-                .append(")");
+//        build query string
+        String querySQL = "WITH "
+                + "queryStreamId AS ( "
+                + "     SELECT id FROM dumpy_stream WHERE job_code = ? AND stream_code = ? "
+                + ") "
+                + ", entities( entityId ) AS ( VALUES ";
 
-        queryBuilder.append( ", entities( entityId ) AS ( VALUES ");
-        int idx = 0;
-        for (Object entityId : entityIds) {
-            queryBuilder.append( "(").param( entityId ).append( ")");
-            if ( idx++ < entityIds.length - 1 ) {
-                queryBuilder.append( ", ");
-            }
+        for ( int idx = 0; idx < entityIds.length; idx++ ) {
+            querySQL += "(?)" + ( ( idx < entityIds.length - 1 ) ? "," : "" );
         }
-        queryBuilder.append( " ) ");
 
-        queryBuilder
-                .append(", upsert AS ( ")
-                .append("    UPDATE dumpy_stream_entity SET last_error_stamp=").param(lastErrorStamp).append(", last_updated_stamp=").param(lastUpdatedStamp)
-                .append("    WHERE stream_id = ( SELECT id FROM queryStreamId ) AND entity_id").in( entityIds )
-                .append("    RETURNING * ")
-                .append(") ")
-                .append("INSERT INTO dumpy_stream_entity ( stream_id, entity_id, last_error_stamp, last_updated_stamp ) ")
-                .append("    SELECT queryStreamId.id, entities.entityId, ").param(lastErrorStamp).append(", ").param(lastUpdatedStamp)
-                .append("   FROM queryStreamId, entities")
-                .append("    WHERE NOT EXISTS ( SELECT * FROM upsert )");
+        querySQL += ")"
+                + ", upsert AS ( "
+                + "     UPDATE dumpy_stream_entity "
+                + "         SET last_error_stamp=?, last_updated_stamp=? "
+                + "         WHERE stream_id = ( SELECT id FROM queryStreamId ) "
+                + "             AND entity_id IN ( ";
 
-        Query query = queryBuilder.build();
+        for ( int idx = 0; idx < entityIds.length; idx++ ) {
+            querySQL += "?" + ( ( idx < entityIds.length - 1 ) ? "," : "" );
+        }
+
+        querySQL += "           ) RETURNING * "
+                + ") "
+                + "INSERT INTO dumpy_stream_entity ( stream_id, entity_id, last_error_stamp, last_updated_stamp ) "
+                + "     SELECT queryStreamId.id, entities.entityId, ?, ? FROM queryStreamId, entities WHERE NOT EXISTS ( SELECT * FROM upsert )";
+
+//        set query parameters
+        List< Object > parameters = new ArrayList<>();
+        parameters.add( jobCode );
+        parameters.add( streamCode );
+        Collections.addAll(parameters, entityIds);
+        parameters.add( lastErrorStamp );
+        parameters.add( lastUpdatedStamp );
+        Collections.addAll(parameters, entityIds);
+        parameters.add( lastErrorStamp );
+        parameters.add( lastUpdatedStamp );
+
+        BaseQuery query = new BaseQuery();
+        query.setType(Query.TYPE.UPDATE );
+        query.setQuery( querySQL );
+        query.setParameters( parameters );
 
         return new JdbcUpdateOperation( query ).run( dataSource );
     }
 
-
-
-
     public PaginatedResponse< String > get(String jobCode, String streamCode, String cursor ) throws SQLException {
         Integer offset = cursor == null || cursor.trim().isEmpty() ? 0 : Integer.valueOf(cursor);
 
-        Query query = SQLQueryBuilder.select("SELECT dumpy_stream_entity.entity_id " +
-                "FROM dumpy_stream_entity " +
-                "  INNER JOIN dumpy_stream ON ( dumpy_stream.id = dumpy_stream_entity.stream_id " +
-                "                               AND dumpy_stream.job_code=").param(jobCode)
-                .append("                       AND dumpy_stream.stream_code=").param(streamCode)
-                .append(" ) " +
-                        "WHERE " +
-                        "  dumpy_stream_entity.last_error_stamp IS NOT NULL " +
-                        "ORDER BY dumpy_stream_entity.id " +
-                        "OFFSET ").param( offset ).append(" LIMIT 10" )
+        Query query = SelectBuilder.columns("dumpy_stream_entity.entity_id")
+                .from("dumpy_stream_entity")
+                .innerJoin("dumpy_stream")
+                    .on("( dumpy_stream.id = dumpy_stream_entity.stream_id AND dumpy_stream.job_code").eq( jobCode )
+                        .literal( " AND dumpy_stream.stream_code" ).eq( streamCode ).literal( ") " )
+                .where("dumpy_stream_entity.last_error_stamp").notEq( (Object) null )
+                .literal( " ORDER BY dumpy_stream_entity.id " )
+                .literal( " OFFSET ").param(offset).literal( " LIMIT 10 " )
                 .build();
+
         return new JdbcSelectOperation<>(query, rs -> {
             List< String > result = new ArrayList<>();
             while( rs.next() ) {

@@ -36,9 +36,9 @@ public class Dumpy implements Consumer< IJob > {
 
         BootyConfig config = new BootyConfig();
         config.setLifecycleSupplier( () -> Arrays.asList( new Loggy()
-                , dumpyDB
                 , latestJobProcessor
                 , errorJobProcessor
+                , dumpyDB
         ) );
 
         Booty.build( config ).start();
