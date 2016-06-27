@@ -8,6 +8,12 @@ public interface ILoader< TYPE > {
         SUCCESS, ERROR
     }
 
+    /**
+     * Loads the given entities into the target system.
+     *
+     * @param entities  the list of extracted entities
+     * @return  Status.SUCCESS if load is ok; Status.ERROR otherwise.
+     */
     Status load(List< ? extends IExtractor.Entity< TYPE > > entities );
 
 }

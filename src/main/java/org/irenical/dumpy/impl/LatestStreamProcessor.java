@@ -58,10 +58,10 @@ public class LatestStreamProcessor implements IStreamProcessor {
      * as there is only one producer, submiting directly to consumers
      */
     @Override
-    public < TYPE > void process(IJob iJob, IStream< TYPE > iStream) throws Exception {
+    public < TYPE, ERROR extends Exception > void process(IJob iJob, IStream< TYPE, ERROR > iStream) throws Exception {
         LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] stream start" );
 
-        final IExtractor< TYPE > iExtractor = iStream.getExtractor();
+        final IExtractor< TYPE, ERROR > iExtractor = iStream.getExtractor();
         final ILoader< TYPE > iLoader = iStream.getLoader();
 
 

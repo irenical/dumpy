@@ -4,11 +4,11 @@ import org.irenical.dumpy.api.IExtractor;
 import org.irenical.dumpy.api.ILoader;
 import org.irenical.dumpy.api.IStream;
 
-public class StreamImpl< TYPE > implements IStream< TYPE > {
+public class StreamImpl< TYPE, ERROR extends Exception > implements IStream< TYPE, ERROR > {
 
     private String code;
 
-    private IExtractor< TYPE > iExtractor;
+    private IExtractor< TYPE, ERROR > iExtractor;
 
     private ILoader< TYPE > iLoader;
 
@@ -16,7 +16,7 @@ public class StreamImpl< TYPE > implements IStream< TYPE > {
 
     }
 
-    public StreamImpl(String code, IExtractor< TYPE > iExtractor, ILoader< TYPE > iLoader) {
+    public StreamImpl(String code, IExtractor< TYPE, ERROR > iExtractor, ILoader< TYPE > iLoader) {
         this.code = code;
         this.iExtractor = iExtractor;
         this.iLoader = iLoader;
@@ -32,11 +32,11 @@ public class StreamImpl< TYPE > implements IStream< TYPE > {
     }
 
     @Override
-    public IExtractor< TYPE > getExtractor() {
+    public IExtractor< TYPE, ERROR > getExtractor() {
         return iExtractor;
     }
 
-    public void setiExtractor(IExtractor< TYPE > iExtractor) {
+    public void setiExtractor(IExtractor< TYPE, ERROR > iExtractor) {
         this.iExtractor = iExtractor;
     }
 

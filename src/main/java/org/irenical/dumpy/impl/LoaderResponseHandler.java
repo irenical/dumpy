@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-public class LoaderResponseHandler< TYPE > implements Runnable {
+public class LoaderResponseHandler< TYPE, ERROR extends Exception > implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger( LoaderResponseHandler.class );
 
@@ -23,13 +23,13 @@ public class LoaderResponseHandler< TYPE > implements Runnable {
 
     private final IJob iJob;
 
-    private final IStream< TYPE > iStream;
+    private final IStream< TYPE, ERROR > iStream;
 
     private final Future< ILoader.Status > loaderTask;
 
     private final List< ? extends IExtractor.Entity< TYPE > > loaderEntities;
 
-    public LoaderResponseHandler(DumpyDB dumpyDB, IJob iJob, IStream< TYPE > iStream, Future< ILoader.Status > loaderTask,
+    public LoaderResponseHandler(DumpyDB dumpyDB, IJob iJob, IStream< TYPE, ERROR > iStream, Future< ILoader.Status > loaderTask,
                                  List< ? extends IExtractor.Entity< TYPE > > loaderEntities ) {
         this.dumpyDB = dumpyDB;
         this.iJob = iJob;

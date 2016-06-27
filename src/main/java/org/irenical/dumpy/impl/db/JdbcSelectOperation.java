@@ -10,6 +10,7 @@ import java.sql.SQLException;
 
 public class JdbcSelectOperation< OUTPUT > extends JdbcOperation< OUTPUT > {
 
+    @FunctionalInterface
     public interface JdbcReaderFunction< OUTPUT > {
 
         OUTPUT apply(ResultSet resultSet) throws SQLException;
