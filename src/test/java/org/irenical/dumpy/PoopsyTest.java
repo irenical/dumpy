@@ -54,7 +54,9 @@ public class PoopsyTest {
             }
         };
 
-        new Dumpy().accept( iJob );
+        Dumpy dumpy = new Dumpy();
+        dumpy.start();
+        dumpy.accept( iJob );
     }
 
 }
