@@ -2,7 +2,6 @@ package org.irenical.dumpy;
 
 import org.irenical.dumpy.api.IExtractor;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,14 +41,14 @@ public class PoopsyExtractor implements IExtractor< Integer, Exception > {
         int nextCursor = cursorIndex + RESPONSE_LIMIT;
         boolean hasNext = nextCursor < TOTAL;
 
-        return response( entities, String.valueOf( nextCursor ), hasNext );
+        return createResponse( entities, String.valueOf( nextCursor ), hasNext );
     }
 
     @Override
     public Response<Integer> get(List< String > ids, String cursor) {
         List< Entity< Integer > > entities = new ArrayList<>( ids.size() );
         entities.addAll(ids.stream().map(id -> new Poopsy(Integer.valueOf(id))).collect(Collectors.toList()));
-        return response( entities, null, false );
+        return createResponse( entities, null, false );
     }
 
 }

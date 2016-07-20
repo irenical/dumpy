@@ -47,7 +47,7 @@ public interface IExtractor< TYPE, ERROR extends Exception > {
     /**
      * Utility to build a paginated response.
      */
-    default Response< TYPE > response( List< Entity< TYPE > > entities, String nextCursor, boolean hasNext ) {
+    default Response< TYPE > createResponse( List< Entity< TYPE > > entities, String nextCursor, boolean hasNext ) {
         Response< TYPE > response = new Response<>();
         response.setValues( entities );
         response.setCursor( nextCursor );
