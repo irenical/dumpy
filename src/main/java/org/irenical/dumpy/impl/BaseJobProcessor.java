@@ -8,7 +8,6 @@ import org.irenical.dumpy.impl.db.DumpyDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.SQLException;
 import java.util.List;
 
 public class BaseJobProcessor implements IJobProcessor {
@@ -44,7 +43,7 @@ public class BaseJobProcessor implements IJobProcessor {
     }
 
     @Override
-    public void accept(IJob iJob) throws SQLException {
+    public void accept(IJob iJob) {
         if ( iJob == null ) {
             throw new IllegalArgumentException( "no job provided" );
         }
@@ -63,21 +62,26 @@ public class BaseJobProcessor implements IJobProcessor {
                     onStreamEnd( iJob, iStream );
                 } catch (Exception e) {
                     onStreamFail( iJob, iStream, e );
+
+//                    stream failure - stop the world !
+                    isRunning = false;
+                    break;
                 }
             }
         }
 
+        LOGGER.debug( "[ job ] done." );
     }
 
-    protected void onStreamStart( IJob iJob, IStream iStream ) throws SQLException {
-
-    }
-
-    protected void onStreamEnd( IJob iJob, IStream iStream ) {
+    protected < ERROR extends Exception > void onStreamStart( IJob iJob, IStream iStream ) throws ERROR {
 
     }
 
-    protected void onStreamFail( IJob iJob, IStream iStream, Exception e ) {
+    protected < ERROR extends Exception > void onStreamEnd( IJob iJob, IStream iStream ) throws ERROR {
+
+    }
+
+    protected < ERROR extends Exception > void onStreamFail( IJob iJob, IStream iStream, Exception e ) throws ERROR {
         // TODO : error handling
         LOGGER.error( e.getLocalizedMessage(), e );
     }

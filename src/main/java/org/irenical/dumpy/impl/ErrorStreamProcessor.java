@@ -112,6 +112,7 @@ public class ErrorStreamProcessor implements IStreamProcessor {
         try {
             boolean awaitTermination = false;
             while ( ! awaitTermination ) {
+                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] waiting for jobs to finish" );
                 awaitTermination = executorService.awaitTermination( 10, TimeUnit.SECONDS );
             }
         } catch ( InterruptedException e ) {

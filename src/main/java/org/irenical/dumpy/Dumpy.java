@@ -69,6 +69,8 @@ public class Dumpy implements LifeCycle, Consumer< IJob > {
             executorService.execute(() -> errorJobProcessor.accept(iJob));
         }
 
+//        do i need to do this? doesnt the job run until it finishes?
+        executorService.shutdown();
         try {
             boolean awaitTermination = false;
             while ( ! awaitTermination ) {

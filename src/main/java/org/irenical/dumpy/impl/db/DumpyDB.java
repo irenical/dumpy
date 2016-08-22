@@ -48,7 +48,7 @@ public class DumpyDB implements LifeCycle {
 
     public String getCursor(String jobCode, String streamCode ) throws SQLException {
         Query query = SelectBuilder
-                .columns( "cursor" )
+                .select( "cursor" )
                 .from( "dumpy_stream" )
                 .where( "job_code" ).eq( jobCode )
                 .and( "stream_code").eq( streamCode )
@@ -60,7 +60,7 @@ public class DumpyDB implements LifeCycle {
 
     public boolean setCursor(String jobCode, String streamCode, String cursor ) throws SQLException {
         Query query = UpdateBuilder.table( "dumpy_stream" ).literal( " SET " )
-                .setExpression( "cursor", cursor )
+                .setParam( "cursor", cursor )
                 .where( "job_code" ).eq( jobCode )
                 .and( "stream_code" ).eq( streamCode )
                 .build();
@@ -69,7 +69,7 @@ public class DumpyDB implements LifeCycle {
     }
 
     public Integer getStreamId( String jobCode, String streamCode ) throws SQLException {
-        Query query = SelectBuilder.columns( "id" )
+        Query query = SelectBuilder.select( "id" )
                 .from( "dumpy_stream" )
                 .where( "job_code" ).eq( jobCode )
                 .and( "stream_code" ).eq( streamCode )
@@ -149,7 +149,7 @@ public class DumpyDB implements LifeCycle {
     public PaginatedResponse< String > get(String jobCode, String streamCode, String cursor ) throws SQLException {
         Integer offset = cursor == null || cursor.trim().isEmpty() ? 0 : Integer.valueOf(cursor);
 
-        Query query = SelectBuilder.columns("dumpy_stream_entity.entity_id")
+        Query query = SelectBuilder.select("dumpy_stream_entity.entity_id")
                 .from("dumpy_stream_entity")
                 .innerJoin("dumpy_stream")
                     .on("( dumpy_stream.id = dumpy_stream_entity.stream_id AND dumpy_stream.job_code").eq( jobCode )

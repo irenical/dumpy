@@ -64,43 +64,47 @@ public class LatestStreamProcessor implements IStreamProcessor {
         final IExtractor< TYPE, ERROR > iExtractor = iStream.getExtractor();
         final ILoader< TYPE > iLoader = iStream.getLoader();
 
-
         ExecutorService executorService = Executors.newCachedThreadPool( new DumpyThreadFactory() );
 
-        String cursor = dumpyDB.getCursor( iJob.getCode(), iStream.getCode() );
-        boolean hasNext = true;
-        while ( isRunning && hasNext ) {
-//            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
-            IExtractor.Response< TYPE > extractorResponse = iExtractor.get(cursor);
-
-            if ( extractorResponse.getValues() != null && ! extractorResponse.getValues().isEmpty() ) {
-                Future<ILoader.Status> loaderTask = executorService.submit(() ->
-                        iLoader.load(extractorResponse.getValues()));
-
-                loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
-                        new LinkedList<>(extractorResponse.getValues())));
-            }
-
-            // update next cursor
-            dumpyDB.setCursor( iJob.getCode(), iStream.getCode(), cursor );
-
-            cursor = extractorResponse.getCursor();
-            hasNext = extractorResponse.hasNext();
-        }
-
-        // wait for all tasks to complete
-        executorService.shutdown();
         try {
-            boolean awaitTermination = false;
-            while ( ! awaitTermination ) {
-                awaitTermination = executorService.awaitTermination( 10, TimeUnit.SECONDS );
+            String cursor = dumpyDB.getCursor(iJob.getCode(), iStream.getCode());
+            boolean hasNext = true;
+            while (isRunning && hasNext) {
+                //            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
+                IExtractor.Response<TYPE> extractorResponse = iExtractor.get(cursor);
+
+                if (extractorResponse.getValues() != null && !extractorResponse.getValues().isEmpty()) {
+                    Future<ILoader.Status> loaderTask = executorService.submit(() ->
+                            iLoader.load(extractorResponse.getValues()));
+
+                    loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
+                            new LinkedList<>(extractorResponse.getValues())));
+                }
+
+                // update next cursor
+                dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
+
+                cursor = extractorResponse.getCursor();
+                hasNext = extractorResponse.hasNext();
             }
-        } catch ( InterruptedException e ) {
-            LOGGER.error( e.getLocalizedMessage(), e );
-            executorService.shutdownNow();
-            executorService.awaitTermination( Long.MAX_VALUE, TimeUnit.NANOSECONDS );
+        } finally {
+
+            // wait for all tasks to complete
+            executorService.shutdown();
+            try {
+                boolean awaitTermination = false;
+                while (!awaitTermination) {
+                    LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] waiting for loaders to finish" );
+                    awaitTermination = executorService.awaitTermination(10, TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException e) {
+                LOGGER.error(e.getLocalizedMessage(), e);
+                executorService.shutdownNow();
+                executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            }
+            LOGGER.debug("[ processor( " + iStream.getCode() + " ) ] stream done");
+
         }
-        LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] stream done" );
     }
 
 }
