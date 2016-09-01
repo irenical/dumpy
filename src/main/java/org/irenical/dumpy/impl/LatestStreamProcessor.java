@@ -81,11 +81,11 @@ public class LatestStreamProcessor implements IStreamProcessor {
                             new LinkedList<>(extractorResponse.getValues())));
                 }
 
-                // update next cursor
-                dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
-
                 cursor = extractorResponse.getCursor();
                 hasNext = extractorResponse.hasNext();
+
+                // update next cursor
+                dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
             }
         } finally {
 
