@@ -27,7 +27,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
     private boolean isRunning = false;
 
 
-    public LatestStreamProcessor(DumpyDB dumpyDB ) {
+    public LatestStreamProcessor(DumpyDB dumpyDB) {
         this.dumpyDB = dumpyDB;
     }
 
@@ -37,13 +37,20 @@ public class LatestStreamProcessor implements IStreamProcessor {
     }
 
     @Override
-    public <ERROR extends Exception> void stop() throws ERROR {
+    public void stop() throws Exception {
         isRunning = false;
+
         loaderResponseExecutor.shutdown();
         try {
-            loaderResponseExecutor.awaitTermination( Long.MAX_VALUE, TimeUnit.NANOSECONDS );
+            boolean awaitTermination = false;
+            while (!awaitTermination) {
+                LOGGER.debug( "[ processor( onStop() ) ] waiting for loaders to finish" );
+                awaitTermination = loaderResponseExecutor.awaitTermination(10, TimeUnit.SECONDS);
+            }
         } catch (InterruptedException e) {
-            LOGGER.error( e.getLocalizedMessage(), e );
+            LOGGER.error(e.getLocalizedMessage(), e);
+            loaderResponseExecutor.shutdownNow();
+            loaderResponseExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         }
     }
 
