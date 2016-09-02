@@ -1,19 +1,21 @@
 package org.irenical.dumpy.impl;
 
-import org.irenical.dumpy.api.IJob;
-import org.irenical.dumpy.impl.db.DumpyDB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.irenical.dumpy.DumpyThreadFactory;
 import org.irenical.dumpy.api.IExtractor;
+import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.ILoader;
 import org.irenical.dumpy.api.IStream;
 import org.irenical.dumpy.api.IStreamProcessor;
+import org.irenical.dumpy.impl.db.DumpyDB;
+import org.irenical.dumpy.impl.model.DumpyBlockingQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class LatestStreamProcessor implements IStreamProcessor {
@@ -71,13 +73,19 @@ public class LatestStreamProcessor implements IStreamProcessor {
         final IExtractor< TYPE, ERROR > iExtractor = iStream.getExtractor();
         final ILoader< TYPE > iLoader = iStream.getLoader();
 
-        ExecutorService executorService = Executors.newCachedThreadPool( new DumpyThreadFactory() );
+//        TODO : magic number
+        final int nThreads = 5;
+        final int maxQueue = 1000;
+        ThreadPoolExecutor executorService = new ThreadPoolExecutor( nThreads, nThreads,
+                0L, TimeUnit.MILLISECONDS,
+                new DumpyBlockingQueue( maxQueue ),
+                new DumpyThreadFactory() );
 
         try {
             String cursor = dumpyDB.getCursor(iJob.getCode(), iStream.getCode());
             boolean hasNext = true;
             while (isRunning && hasNext) {
-                //            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
+//                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
                 IExtractor.Response<TYPE> extractorResponse = iExtractor.get(cursor);
 
                 if (extractorResponse.getValues() != null && !extractorResponse.getValues().isEmpty()) {
