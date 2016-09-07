@@ -64,6 +64,7 @@ public class Dumpy implements LifeCycle, Consumer< IJob > {
             throw new IllegalStateException( "dumpy is not started" );
         }
 
+//        FIXME : respond to 'kill SIGTERM'
         executorService.execute(() -> latestJobProcessor.accept( iJob ));
         if ( errorCheckEnabled ) {
             executorService.execute(() -> errorJobProcessor.accept(iJob));

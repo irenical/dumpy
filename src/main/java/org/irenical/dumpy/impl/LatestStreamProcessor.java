@@ -82,13 +82,17 @@ public class LatestStreamProcessor implements IStreamProcessor {
                 new DumpyThreadFactory() );
 
         try {
+//            start by getting the current job/stream cursor (should get null for unknown job/stream)
             String cursor = dumpyDB.getCursor(iJob.getCode(), iStream.getCode());
             boolean hasNext = true;
             while (isRunning && hasNext) {
 //                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
+
+//                get entities from extractor
                 IExtractor.Response<TYPE> extractorResponse = iExtractor.get(cursor);
 
                 if (extractorResponse.getValues() != null && !extractorResponse.getValues().isEmpty()) {
+//                    send entities to the loader and handle its response (separate thread)
                     Future<ILoader.Status> loaderTask = executorService.submit(() ->
                             iLoader.load(extractorResponse.getValues()));
 
@@ -96,11 +100,15 @@ public class LatestStreamProcessor implements IStreamProcessor {
                             new LinkedList<>(extractorResponse.getValues())));
                 }
 
-                cursor = extractorResponse.getCursor();
-                hasNext = extractorResponse.hasNext();
+//                update next cursor iteration (if any)
+//                this is 'latest', prevent if from restarting from 0
+                if ( extractorResponse.getCursor() != null ) {
+                    cursor = extractorResponse.getCursor();
+                    hasNext = extractorResponse.hasNext();
 
-                // update next cursor
-                dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
+                    // update next cursor
+                    dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
+                }
             }
         } finally {
 
