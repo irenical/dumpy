@@ -42,6 +42,7 @@ public class LoaderResponseHandler< TYPE, ERROR extends Exception > implements R
     public void run() {
         try {
             ILoader.Status taskStatus = loaderTask.get();
+            LOGGER.info( "[ loaderHandler( " + Thread.currentThread().getName() + " ) ] status=" + taskStatus.name() );
 
             ZonedDateTime now = ZonedDateTime.now( ZoneId.of( "Europe/Lisbon" ) );
             ZonedDateTime lastErrorStamp = ILoader.Status.ERROR.equals(taskStatus) ? now : null;

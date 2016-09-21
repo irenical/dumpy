@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +21,10 @@ public class LatestStreamProcessor implements IStreamProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger( LatestStreamProcessor.class );
 
-    private final ExecutorService loaderResponseExecutor = Executors.newCachedThreadPool( new DumpyThreadFactory() );
+    private final ExecutorService loaderResponseExecutor = new ThreadPoolExecutor( 10, 10,
+            0L, TimeUnit.MILLISECONDS,
+            new DumpyBlockingQueue( 1000 ),
+            new DumpyThreadFactory() );
 
     private final DumpyDB dumpyDB;
 
