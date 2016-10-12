@@ -1,4 +1,4 @@
-package org.irenical.dumpy.impl;
+package org.irenical.dumpy.impl.job;
 
 import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.IJobProcessor;
@@ -85,6 +85,5 @@ public class BaseJobProcessor implements IJobProcessor {
         // TODO : error handling
         LOGGER.error( e.getLocalizedMessage(), e );
     }
-
 
 }

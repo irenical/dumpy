@@ -1,4 +1,4 @@
-package org.irenical.dumpy.impl;
+package org.irenical.dumpy.impl.stream;
 
 import org.irenical.dumpy.DumpyThreadFactory;
 import org.irenical.dumpy.api.IExtractor;
@@ -6,6 +6,8 @@ import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.ILoader;
 import org.irenical.dumpy.api.IStream;
 import org.irenical.dumpy.api.IStreamProcessor;
+import org.irenical.dumpy.impl.ExecutorTerminator;
+import org.irenical.dumpy.impl.LoaderResponseHandler;
 import org.irenical.dumpy.impl.db.DumpyDB;
 import org.irenical.dumpy.impl.model.DumpyBlockingQueue;
 import org.slf4j.Logger;
@@ -43,19 +45,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
     @Override
     public void stop() throws Exception {
         isRunning = false;
-
-        loaderResponseExecutor.shutdown();
-        try {
-            boolean awaitTermination = false;
-            while (!awaitTermination) {
-                LOGGER.debug( "[ processor( onStop() ) ] waiting for loaders to finish" );
-                awaitTermination = loaderResponseExecutor.awaitTermination(10, TimeUnit.SECONDS);
-            }
-        } catch (InterruptedException e) {
-            LOGGER.error(e.getLocalizedMessage(), e);
-            loaderResponseExecutor.shutdownNow();
-            loaderResponseExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        }
+        ExecutorTerminator.terminate( 10, Long.MAX_VALUE, loaderResponseExecutor );
     }
 
     @Override
@@ -93,7 +83,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
 //                get entities from extractor
                 IExtractor.Response<TYPE> extractorResponse = iExtractor.get(cursor);
 
-                if (extractorResponse.getValues() != null && !extractorResponse.getValues().isEmpty()) {
+                if ( isRunning && extractorResponse.getValues() != null && !extractorResponse.getValues().isEmpty() ) {
 //                    send entities to the loader and handle its response (separate thread)
                     Future<ILoader.Status> loaderTask = executorService.submit(() ->
                             iLoader.load(extractorResponse.getValues()));
@@ -104,7 +94,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
 
 //                update next cursor iteration (if any)
 //                this is 'latest', prevent if from restarting from 0
-                if ( extractorResponse.getCursor() != null ) {
+                if ( isRunning && extractorResponse.getCursor() != null ) {
                     cursor = extractorResponse.getCursor();
                     hasNext = extractorResponse.hasNext();
 
@@ -115,18 +105,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
         } finally {
 
             // wait for all tasks to complete
-            executorService.shutdown();
-            try {
-                boolean awaitTermination = false;
-                while (!awaitTermination) {
-                    LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] waiting for loaders to finish" );
-                    awaitTermination = executorService.awaitTermination(10, TimeUnit.SECONDS);
-                }
-            } catch (InterruptedException e) {
-                LOGGER.error(e.getLocalizedMessage(), e);
-                executorService.shutdownNow();
-                executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-            }
+            ExecutorTerminator.terminate( 10, Long.MAX_VALUE, executorService );
             LOGGER.debug("[ processor( " + iStream.getCode() + " ) ] stream done");
 
         }

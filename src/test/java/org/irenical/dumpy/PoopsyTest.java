@@ -53,7 +53,7 @@ public class PoopsyTest implements LifeCycle {
         bootyConfig.setOnError(e -> {
             throw new RuntimeException( e.getLocalizedMessage(), e );
         });
-        bootyConfig.setLifecycleSupplier(() -> Arrays.asList(new EmbeddedPostgreSQL(), new PoopsyTest()));
+        bootyConfig.setLifecycleSupplier(() -> Arrays.asList( new EmbeddedPostgreSQL(), new PoopsyTest()) );
         bootyConfig.setShutdownHook( true );
 
         LifeCycle app = Booty.build(bootyConfig);

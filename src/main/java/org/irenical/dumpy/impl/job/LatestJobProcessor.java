@@ -1,5 +1,6 @@
-package org.irenical.dumpy.impl;
+package org.irenical.dumpy.impl.job;
 
+import org.irenical.dumpy.impl.stream.LatestStreamProcessor;
 import org.irenical.dumpy.impl.db.DumpyDB;
 import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.IStream;
