@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -68,47 +69,54 @@ public class ErrorStreamProcessor implements IStreamProcessor {
                 new DumpyThreadFactory() );
 
         try {
-            //        control dumpy own cursor
+//            control dumpy own cursor
             String cursor = null;
             boolean hasNext = true;
 
-            while (isRunning && hasNext) {
-                //            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] iteration" );
+            while ( isRunning() && hasNext ) {
+//                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] iteration" );
 
-                // get errored entities for this stream from the db
+//                get errored entities for this stream from the db
                 PaginatedResponse<String> response = dumpyDB.get(iJob.getCode(), iStream.getCode(), cursor);
-                //            LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] db: " + response.getValues().size() );
+                List<String> values = response.getValues();
+//                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] db: " + response.getValues().size() );
 
-                //            not values to try again? continue
-                if (response.getValues() != null && !response.getValues().isEmpty()) {
-                    //              control extractor cursor
+//                no values to try again? continue
+                if (values != null && !values.isEmpty()) {
+//                    control extractor cursor
                     String extractorCursor = null;
                     boolean extractorHasNext = true;
-                    while ( isRunning && extractorHasNext) {
-                        //                    LOGGER.debug("[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor);
+                    while ( isRunning() && extractorHasNext ) {
+//                        LOGGER.debug("[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor);
 
-                        // get those entities from stream extractor ( by entityId )
+//                        get those entities from stream extractor ( by entityId )
                         IExtractor.Response<TYPE> typeResponse = iExtractor.get(response.values, extractorCursor);
-                        //                    LOGGER.debug("[ processor( " + iStream.getCode() + " ) ] extractor: " + typeResponse.getValues().size());
+                        List<IExtractor.Entity<TYPE>> entities = typeResponse.getValues();
+//                        LOGGER.debug("[ processor( " + iStream.getCode() + " ) ] extractor: " + typeResponse.getValues().size());
 
-                        if ( isRunning && typeResponse.getValues() != null && !typeResponse.getValues().isEmpty()) {
-                            // load entities and process response
+                        if ( isRunning() && entities != null && !entities.isEmpty()) {
+//                            load entities and process response
                             Future<ILoader.Status> loaderTask = executorService.submit(() ->
-                                    iLoader.load(typeResponse.getValues()));
+                                    iLoader.load(entities));
 
                             loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
-                                    new LinkedList<>(typeResponse.getValues())));
+                                    new LinkedList<>(entities)));
                         }
 
-                        //                update extractor cursor
+//                        update extractor cursor
                         extractorCursor = typeResponse.getCursor();
                         extractorHasNext = typeResponse.hasNext();
                     }
                 }
 
-                //            update dumpy cursor
+//                update dumpy cursor
                 cursor = response.cursor;
                 hasNext = response.hasNext;
+
+                if ( values == null || values.isEmpty() ) {
+                    Thread.sleep( 1000L );
+                }
+
             }
         } finally {
 

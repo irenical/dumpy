@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -77,30 +78,40 @@ public class LatestStreamProcessor implements IStreamProcessor {
 //            start by getting the current job/stream cursor (should get null for unknown job/stream)
             String cursor = dumpyDB.getCursor(iJob.getCode(), iStream.getCode());
             boolean hasNext = true;
-            while (isRunning && hasNext) {
+            while ( isRunning() && hasNext ) {
 //                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
 
 //                get entities from extractor
                 IExtractor.Response<TYPE> extractorResponse = iExtractor.get(cursor);
+                List<IExtractor.Entity<TYPE>> entities = extractorResponse.getValues();
 
-                if ( isRunning && extractorResponse.getValues() != null && !extractorResponse.getValues().isEmpty() ) {
-//                    send entities to the loader and handle its response (separate thread)
-                    Future<ILoader.Status> loaderTask = executorService.submit(() ->
-                            iLoader.load(extractorResponse.getValues()));
+                if ( isRunning() ) {
 
-                    loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
-                            new LinkedList<>(extractorResponse.getValues())));
+                    if (entities != null && !entities.isEmpty()) {
+                        //                        send entities to the loader and handle its response (separate thread)
+                        Future<ILoader.Status> loaderTask = executorService.submit(() ->
+                                iLoader.load(entities));
+
+                        loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
+                                new LinkedList<>(entities)));
+                    }
+
+//                    update next cursor iteration (if any)
+//                    this is 'latest', prevent if from restarting from 0
+                    if ( extractorResponse.getCursor() != null ) {
+                        cursor = extractorResponse.getCursor();
+                        hasNext = extractorResponse.hasNext();
+
+                        // update next cursor
+                        dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
+                    }
+
                 }
 
-//                update next cursor iteration (if any)
-//                this is 'latest', prevent if from restarting from 0
-                if ( isRunning && extractorResponse.getCursor() != null ) {
-                    cursor = extractorResponse.getCursor();
-                    hasNext = extractorResponse.hasNext();
-
-                    // update next cursor
-                    dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
+                if ( entities == null || entities.isEmpty() ) {
+                    Thread.sleep( 1000L );
                 }
+
             }
         } finally {
 
