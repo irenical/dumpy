@@ -10,6 +10,7 @@ import org.irenical.dumpy.impl.ExecutorTerminator;
 import org.irenical.dumpy.impl.LoaderResponseHandler;
 import org.irenical.dumpy.impl.db.DumpyDB;
 import org.irenical.dumpy.impl.model.DumpyBlockingQueue;
+import org.irenical.jindy.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,9 +56,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
     }
 
     /**
-     * Producer/Consumer pattern, with 1 Producer and N Consumers.
-     * There is no need to add complexity of multiple executor services for producer/consumer,
-     * as there is only one producer, submiting directly to consumers
+     * Producer/Consumer pattern, with 1 Producer N Consumers.
      */
     @Override
     public < TYPE, ERROR extends Exception > void process(IJob iJob, IStream< TYPE, ERROR > iStream) throws Exception {
@@ -79,25 +78,30 @@ public class LatestStreamProcessor implements IStreamProcessor {
             String cursor = dumpyDB.getCursor(iJob.getCode(), iStream.getCode());
             boolean hasNext = true;
             while ( isRunning() && hasNext ) {
-//                LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] cursor=" + cursor );
 
 //                get entities from extractor
-                IExtractor.Response<TYPE> extractorResponse = iExtractor.get(cursor);
-                List<IExtractor.Entity<TYPE>> entities = extractorResponse.getValues();
+                IExtractor.Response<TYPE> extractorResponse;
+                List<IExtractor.Entity<TYPE>> entities;
+                try {
+                    extractorResponse = iExtractor.get(cursor);
+                    entities = extractorResponse.getValues();
+                } catch ( Exception e ) {
+//                    any extractor error, skip it and keep trying
+                    LOGGER.error( e.getLocalizedMessage(), e );
+                    continue;
+                }
 
                 if ( isRunning() ) {
 
                     if (entities != null && !entities.isEmpty()) {
-                        //                        send entities to the loader and handle its response (separate thread)
-                        Future<ILoader.Status> loaderTask = executorService.submit(() ->
-                                iLoader.load(entities));
+//                        send entities to the loader and handle its response (separate thread)
+                        Future<ILoader.Status> loaderTask = executorService.submit(() -> iLoader.load(entities));
 
                         loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
                                 new LinkedList<>(entities)));
                     }
 
 //                    update next cursor iteration (if any)
-//                    this is 'latest', prevent if from restarting from 0
                     if ( extractorResponse.getCursor() != null ) {
                         cursor = extractorResponse.getCursor();
                         hasNext = extractorResponse.hasNext();
@@ -106,10 +110,10 @@ public class LatestStreamProcessor implements IStreamProcessor {
                         dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
                     }
 
-                }
-
-                if ( entities == null || entities.isEmpty() ) {
-                    Thread.sleep( 1000L );
+                    if ( entities == null || entities.isEmpty() ) {
+                        String sleepValue = ConfigFactory.getConfig().getString("dumpy.latest.sleep", "1000");
+                        Thread.sleep( Long.valueOf( sleepValue ) );
+                    }
                 }
 
             }
