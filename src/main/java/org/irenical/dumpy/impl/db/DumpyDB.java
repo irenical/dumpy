@@ -59,7 +59,7 @@ public class DumpyDB implements LifeCycle {
     }
 
     public boolean setCursor(String jobCode, String streamCode, String cursor ) throws SQLException {
-        Query query = UpdateBuilder.table( "dumpy_stream" ).literal( " SET " )
+        Query query = UpdateBuilder.update( "dumpy_stream" ).literal( " SET " )
                 .setParam( "cursor", cursor )
                 .where( "job_code" ).eq( jobCode )
                 .and( "stream_code" ).eq( streamCode )

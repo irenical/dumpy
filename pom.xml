@@ -44,7 +44,7 @@
     <dependency>
       <groupId>org.irenical.drowsy</groupId>
       <artifactId>drowsy</artifactId>
-      <version>0.0.8</version>
+      <version>0.0.12</version>
     </dependency>
 
     <dependency>
