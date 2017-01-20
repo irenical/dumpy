@@ -4,8 +4,8 @@
 
   <parent>
     <groupId>org.irenical.maven</groupId>
-    <artifactId>parent-executable</artifactId>
-    <version>1.1.4</version>
+    <artifactId>parent-root</artifactId>
+    <version>1.8.3</version>
   </parent>
 
   <groupId>org.irenical</groupId>
