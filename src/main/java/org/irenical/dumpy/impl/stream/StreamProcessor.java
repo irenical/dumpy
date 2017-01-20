@@ -21,9 +21,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class LatestStreamProcessor implements IStreamProcessor {
+public class StreamProcessor implements IStreamProcessor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger( LatestStreamProcessor.class );
+    private static final Logger LOGGER = LoggerFactory.getLogger( StreamProcessor.class );
 
     private final ExecutorService loaderResponseExecutor = new ThreadPoolExecutor( 10, 10,
             0L, TimeUnit.MILLISECONDS,
@@ -35,7 +35,7 @@ public class LatestStreamProcessor implements IStreamProcessor {
     private boolean isRunning = false;
 
 
-    public LatestStreamProcessor(DumpyDB dumpyDB) {
+    public StreamProcessor(DumpyDB dumpyDB) {
         this.dumpyDB = dumpyDB;
     }
 
@@ -102,18 +102,18 @@ public class LatestStreamProcessor implements IStreamProcessor {
                     }
 
 //                    update next cursor iteration (if any)
+                    cursor = extractorResponse.getCursor();
+                    hasNext = extractorResponse.hasNext();
                     if ( extractorResponse.getCursor() != null ) {
-                        cursor = extractorResponse.getCursor();
-                        hasNext = extractorResponse.hasNext();
-
                         // update next cursor
                         dumpyDB.setCursor(iJob.getCode(), iStream.getCode(), cursor);
                     }
 
-                    if ( entities == null || entities.isEmpty() ) {
-                        String sleepValue = ConfigFactory.getConfig().getString("dumpy.latest.sleep", "1000");
-                        Thread.sleep( Long.valueOf( sleepValue ) );
-                    }
+
+//                    always sleep (free hardware resources)
+                    String sleepValue = ConfigFactory.getConfig().getString("dumpy.latest.sleep", "1000");
+                    LOGGER.debug( "[ processor( " + iStream.getCode() + " ) ] sleeping " + sleepValue + "ms" );
+                    Thread.sleep( Long.valueOf( sleepValue ) );
                 }
 
             }

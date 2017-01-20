@@ -1,16 +1,16 @@
 package org.irenical.dumpy.impl.job;
 
-import org.irenical.dumpy.impl.stream.LatestStreamProcessor;
+import org.irenical.dumpy.impl.stream.StreamProcessor;
 import org.irenical.dumpy.impl.db.DumpyDB;
 import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.IStream;
 
 import java.sql.SQLException;
 
-public class LatestJobProcessor extends BaseJobProcessor {
+public class JobProcessor extends BaseJobProcessor {
 
-    public LatestJobProcessor(DumpyDB dumpyDB ) {
-        super( dumpyDB, new LatestStreamProcessor( dumpyDB ) );
+    public JobProcessor(DumpyDB dumpyDB ) {
+        super( dumpyDB, new StreamProcessor( dumpyDB ) );
     }
 
     @Override

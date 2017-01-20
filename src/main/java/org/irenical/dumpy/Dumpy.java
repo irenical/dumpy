@@ -4,7 +4,7 @@ import org.irenical.dumpy.api.IJob;
 import org.irenical.dumpy.api.IJobProcessor;
 import org.irenical.dumpy.impl.job.ErrorJobProcessor;
 import org.irenical.dumpy.impl.db.DumpyDB;
-import org.irenical.dumpy.impl.job.LatestJobProcessor;
+import org.irenical.dumpy.impl.job.JobProcessor;
 import org.irenical.lifecycle.LifeCycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ public class Dumpy implements LifeCycle, Consumer< IJob > {
 
     public Dumpy(boolean errorCheckEnabled) {
         this.jobProcessors = new LinkedList<>();
-        this.jobProcessors.add( new LatestJobProcessor( dumpyDB ) );
+        this.jobProcessors.add( new JobProcessor( dumpyDB ) );
         if ( errorCheckEnabled ) {
             this.jobProcessors.add( new ErrorJobProcessor( dumpyDB ) );
         }

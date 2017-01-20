@@ -12,7 +12,7 @@ import java.util.List;
 
 public class BaseJobProcessor implements IJobProcessor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger( LatestJobProcessor.class );
+    private static final Logger LOGGER = LoggerFactory.getLogger( BaseJobProcessor.class );
 
     private final IStreamProcessor streamProcessor;
 
