@@ -54,14 +54,17 @@ public class BaseJobProcessor implements IJobProcessor {
         }
 
         while ( isRunning && ! Thread.currentThread().isInterrupted() ) {
-            for (IStream iStream : streams) {
-                onStreamStart( iJob, iStream );
-
+            for (IStream< ?, ? > iStream : streams) {
                 try {
+                    onStreamStart( iJob, iStream );
                     streamProcessor.process( iJob, iStream );
                     onStreamEnd( iJob, iStream );
                 } catch (Exception e) {
-                    onStreamFail( iJob, iStream, e );
+                    try {
+                        onStreamFail(iJob, iStream, e);
+                    } catch ( Exception e1 ) {
+                        LOGGER.error( e1.getLocalizedMessage(), e1 );
+                    }
 
 //                    stream failure - stop the world !
                     isRunning = false;
