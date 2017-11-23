@@ -9,7 +9,7 @@
 
   <groupId>org.irenical</groupId>
   <artifactId>dumpy</artifactId>
-  <version>0.0.9-SNAPSHOT</version>
+  <version>0.0.9</version>
   <packaging>jar</packaging>
 
   <name>dumpy</name>
@@ -18,7 +18,7 @@
     <connection>scm:git:git@github.com:irenical/dumpy.git</connection>
     <developerConnection>scm:git:git@github.com:irenical/dumpy.git</developerConnection>
     <url>git@github.com:irenical/dumpy.git</url>
-    <tag>HEAD</tag>
+    <tag>dumpy-0.0.9</tag>
   </scm>
 
 
