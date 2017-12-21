@@ -65,9 +65,8 @@ public class StreamProcessor implements IStreamProcessor {
         final IExtractor< TYPE, ERROR > iExtractor = iStream.getExtractor();
         final ILoader< TYPE > iLoader = iStream.getLoader();
 
-//        TODO : magic number
-        final int nThreads = 5;
-        final int maxQueue = 1000;
+        final int nThreads = ConfigFactory.getConfig().getInt("dumpy.latest.thread.count", 5);
+        final int maxQueue = ConfigFactory.getConfig().getInt("dumpy.latest.thread.queue.capacity", 1000);
         ThreadPoolExecutor executorService = new ThreadPoolExecutor( nThreads, nThreads,
                 0L, TimeUnit.MILLISECONDS,
                 new DumpyBlockingQueue( maxQueue ),
