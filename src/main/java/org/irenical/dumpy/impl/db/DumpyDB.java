@@ -18,6 +18,8 @@ import java.util.List;
 
 public class DumpyDB implements LifeCycle {
 
+    private static final int LIMIT = 10;
+
     private final DrowsyDataSource dataSource;
 
     public DumpyDB( ) {
@@ -155,8 +157,8 @@ public class DumpyDB implements LifeCycle {
                     .on("( dumpy_stream.id = dumpy_stream_entity.stream_id AND dumpy_stream.job_code").eq( jobCode )
                         .literal( " AND dumpy_stream.stream_code" ).eq( streamCode ).literal( ") " )
                 .where("dumpy_stream_entity.last_error_stamp").notEq( (Object) null )
-                .literal( " ORDER BY dumpy_stream_entity.id " )
-                .literal( " OFFSET ").param(offset).literal( " LIMIT 10 " )
+                .literal( " ORDER BY dumpy_stream_entity.last_updated_stamp DESC " )
+                .literal( " OFFSET ").param(offset).literal( " LIMIT " + LIMIT)
                 .build();
 
         return new JdbcSelectOperation<>(query, rs -> {
@@ -167,8 +169,8 @@ public class DumpyDB implements LifeCycle {
 
             PaginatedResponse< String > cursorResponse = new PaginatedResponse<>();
             cursorResponse.values = result;
-            cursorResponse.cursor = String.valueOf( offset + 10 );
-            cursorResponse.hasNext = result.size() >= 10;
+            cursorResponse.cursor = String.valueOf( offset + LIMIT );
+            cursorResponse.hasNext = result.size() >= LIMIT;
 
             return cursorResponse;
         }).run( dataSource );
