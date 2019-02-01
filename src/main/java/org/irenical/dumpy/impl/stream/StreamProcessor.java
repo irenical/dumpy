@@ -1,11 +1,7 @@
 package org.irenical.dumpy.impl.stream;
 
 import org.irenical.dumpy.DumpyThreadFactory;
-import org.irenical.dumpy.api.IExtractor;
-import org.irenical.dumpy.api.IJob;
-import org.irenical.dumpy.api.ILoader;
-import org.irenical.dumpy.api.IStream;
-import org.irenical.dumpy.api.IStreamProcessor;
+import org.irenical.dumpy.api.*;
 import org.irenical.dumpy.impl.ExecutorTerminator;
 import org.irenical.dumpy.impl.LoaderResponseHandler;
 import org.irenical.dumpy.impl.db.DumpyDB;
@@ -14,8 +10,8 @@ import org.irenical.jindy.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -94,10 +90,10 @@ public class StreamProcessor implements IStreamProcessor {
 
                     if (entities != null && !entities.isEmpty()) {
 //                        send entities to the loader and handle its response (separate thread)
-                        Future<ILoader.Status> loaderTask = executorService.submit(() -> iLoader.load(entities));
+                        Future<Map< ? extends IExtractor.Entity< TYPE >, ILoader.Status>> loaderTask =
+                                executorService.submit(() -> iLoader.load(entities));
 
-                        loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
-                                new LinkedList<>(entities)));
+                        loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask));
                     }
 
 //                    update next cursor iteration (if any)

@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -25,36 +27,53 @@ public class LoaderResponseHandler< TYPE, ERROR extends Exception > implements R
 
     private final IStream< TYPE, ERROR > iStream;
 
-    private final Future< ILoader.Status > loaderTask;
+    private final Future< Map< ? extends IExtractor.Entity< TYPE >, ILoader.Status> > loaderTask;
 
-    private final List< ? extends IExtractor.Entity< TYPE > > loaderEntities;
 
-    public LoaderResponseHandler(DumpyDB dumpyDB, IJob iJob, IStream< TYPE, ERROR > iStream, Future< ILoader.Status > loaderTask,
-                                 List< ? extends IExtractor.Entity< TYPE > > loaderEntities ) {
+    public LoaderResponseHandler(DumpyDB dumpyDB, IJob iJob, IStream< TYPE, ERROR > iStream,
+                                 Future<Map< ? extends IExtractor.Entity< TYPE >, ILoader.Status>> loaderTask ) {
         this.dumpyDB = dumpyDB;
         this.iJob = iJob;
         this.iStream = iStream;
         this.loaderTask = loaderTask;
-        this.loaderEntities = loaderEntities;
     }
 
     @Override
     public void run() {
         try {
-            ILoader.Status taskStatus = loaderTask.get();
-            LOGGER.info( "[ loaderHandler( " + Thread.currentThread().getName() + " ) ] status=" + taskStatus.name() );
+            Map< ? extends IExtractor.Entity< TYPE >, ILoader.Status> taskStatus = loaderTask.get();
+
+//            split result into successes and errors so we upsert them accordingly
+            List< IExtractor.Entity<TYPE> > success = new LinkedList<>();
+            List< IExtractor.Entity<TYPE> > errors = new LinkedList<>();
+            for (IExtractor.Entity< TYPE > entity : taskStatus.keySet()) {
+                ILoader.Status status = taskStatus.get(entity);
+                if (ILoader.Status.SUCCESS.equals( status ) ) {
+                    success.add( entity );
+                } else {
+                    errors.add( entity );
+                }
+            }
+
+            LOGGER.info( "[ loaderHandler( " + Thread.currentThread().getName() + " ) ] success=" + success.size() + "; error=" + errors.size() );
 
             ZonedDateTime now = ZonedDateTime.now( ZoneId.of( "Europe/Lisbon" ) );
-            ZonedDateTime lastErrorStamp = ILoader.Status.ERROR.equals(taskStatus) ? now : null;
 
-            Object[] entities = loaderEntities.stream()
-                    .map(IExtractor.Entity::getId)
-                    .toArray();
+//            maybe this should be optimized into a single datastructure + single query (one upsert)
+//            upsert success entities (no error stamp)
+            dumpyDB.upsertEntities( iJob.getCode(), iStream.getCode(), convert( success ), null, now );
+//            upsert error entities
+            dumpyDB.upsertEntities( iJob.getCode(), iStream.getCode(), convert( errors ), now, now );
 
-            dumpyDB.upsertEntities( iJob.getCode(), iStream.getCode(), entities, lastErrorStamp, now );
         } catch ( ExecutionException | InterruptedException | SQLException e ) {
             LOGGER.error( e.getLocalizedMessage(), e );
         }
+    }
+
+    private Object[] convert( List< IExtractor.Entity< TYPE > > entities ) {
+        return entities.stream()
+                .map(IExtractor.Entity::getId)
+                .toArray();
     }
 
 }

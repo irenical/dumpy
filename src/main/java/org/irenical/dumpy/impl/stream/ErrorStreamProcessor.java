@@ -1,26 +1,18 @@
 package org.irenical.dumpy.impl.stream;
 
 import org.irenical.dumpy.DumpyThreadFactory;
-import org.irenical.dumpy.api.IExtractor;
-import org.irenical.dumpy.api.IJob;
-import org.irenical.dumpy.api.ILoader;
-import org.irenical.dumpy.api.IStream;
-import org.irenical.dumpy.api.IStreamProcessor;
+import org.irenical.dumpy.api.*;
 import org.irenical.dumpy.impl.ExecutorTerminator;
 import org.irenical.dumpy.impl.LoaderResponseHandler;
+import org.irenical.dumpy.impl.db.DumpyDB;
 import org.irenical.dumpy.impl.model.DumpyBlockingQueue;
 import org.irenical.dumpy.impl.model.PaginatedResponse;
-import org.irenical.dumpy.impl.db.DumpyDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.*;
 
 public class ErrorStreamProcessor implements IStreamProcessor {
 
@@ -96,11 +88,10 @@ public class ErrorStreamProcessor implements IStreamProcessor {
 
                         if ( isRunning() && entities != null && !entities.isEmpty()) {
 //                            load entities and process response
-                            Future<ILoader.Status> loaderTask = executorService.submit(() ->
-                                    iLoader.load(entities));
+                            Future<Map< ? extends IExtractor.Entity< TYPE >, ILoader.Status>> loaderTask =
+                                    executorService.submit(() -> iLoader.load(entities));
 
-                            loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask,
-                                    new LinkedList<>(entities)));
+                            loaderResponseExecutor.execute(new LoaderResponseHandler<>(dumpyDB, iJob, iStream, loaderTask));
                         }
 
 //                        update extractor cursor
