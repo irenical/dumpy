@@ -55,7 +55,8 @@ public class LoaderResponseHandler< TYPE, ERROR extends Exception > implements R
                 }
             }
 
-            LOGGER.info( "[ loaderHandler( " + Thread.currentThread().getName() + " ) ] success=" + success.size() + "; error=" + errors.size() );
+            LOGGER.info( "[ loaderHandler( " + Thread.currentThread().getName() + " ) ] " +
+                    "success=" + success.size() + "; error=" + errors.size() );
 
             ZonedDateTime now = ZonedDateTime.now( ZoneId.of( "Europe/Lisbon" ) );
 
